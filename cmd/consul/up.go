@@ -5,9 +5,10 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
+	"os/exec"
+	"strconv"
 
 	"github.com/urfave/cli/v2"
-	"golang.org/x/crypto/ssh"
 	"gopkg.in/yaml.v2"
 )
 
@@ -54,33 +55,22 @@ func DownloadConsul(c *Config) (*os.File, error) {
 }
 
 func CopyConsulToHosts(c *Config, file *os.File) error {
-	privateKey, err := ioutil.ReadFile(c.SSHKey)
-	if err != nil {
+	allHosts := append(c.Clients, c.Servers...)
+	unzipCmd := exec.Command("unzip",
+		file.Name(),
+		"-d", "/tmp")
+	if err := unzipCmd.Run(); err != nil {
 		return err
 	}
-	signer, err := ssh.ParsePrivateKey(privateKey)
-	if err != nil {
-		return err
-	}
-	for _, host := range append(c.Clients, c.Servers...) {
-		sshConfig := &ssh.ClientConfig{
-			User: host.User,
-			Auth: []ssh.AuthMethod{
-				ssh.PublicKeys(signer),
-			},
-			HostKeyCallback: ssh.InsecureIgnoreHostKey(),
-		}
-		client, err := ssh.Dial("tcp", fmt.Sprintf("%s:%s", host.Address, host.SshPort), sshConfig)
-		if err != nil {
+
+	for _, host := range allHosts {
+		copyCmd := exec.Command("scp",
+			"-P", strconv.Itoa(int(host.SshPort)),
+			"/tmp/consul",
+			fmt.Sprintf("%s@%s:/home/%s/", host.User, host.Address, host.User))
+		if err := copyCmd.Run(); err != nil {
 			return err
 		}
-
-		session, err := client.NewSession()
-		if err != nil {
-			return err
-		}
-		defer session.Close()
-
 	}
 	return nil
 }
