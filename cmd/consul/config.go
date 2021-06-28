@@ -31,9 +31,10 @@ const (
 )
 
 type Host struct {
-	Address string `yaml:"address"`
-	SshPort int64  `yaml:"sshPort"`
-	User    string `yaml:"user"`
+	Address   string `yaml:"address"`
+	SshPort   int64  `yaml:"sshPort"`
+	User      string `yaml:"user"`
+	AgentName string `yaml:"agentName"`
 }
 
 type Config struct {
@@ -53,6 +54,7 @@ func generateConfig(c *cli.Context) error {
 	}
 
 	os.WriteFile("consul.yaml", configBytes, fs.FileMode(int(0664)))
+	log.Println("Config saved in consul.yaml!")
 	return nil
 }
 
@@ -175,9 +177,9 @@ func survey() *Config {
 		isServer := question(fmt.Sprintf("Is %d host server?", hostNumber), "yes", booleanInput).(bool)
 
 		if isServer {
-			c.Servers = append(c.Servers, Host{address, sshPort, user})
+			c.Servers = append(c.Servers, Host{address, sshPort, user, fmt.Sprintf("server%d", len(c.Servers)+1)})
 		} else {
-			c.Clients = append(c.Clients, Host{address, sshPort, user})
+			c.Clients = append(c.Clients, Host{address, sshPort, user, fmt.Sprintf("client%d", len(c.Clients)+1)})
 		}
 	}
 	c.ConsulVersion = question("Consul version", "1.10.0", stringInput).(string)
