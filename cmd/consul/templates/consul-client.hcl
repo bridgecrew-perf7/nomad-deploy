@@ -1,1 +1,1 @@
-retry_join = {{ .Servers }}
+retry_join = '{{ .Servers }}'
