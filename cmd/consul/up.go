@@ -2,17 +2,18 @@ package consul
 
 import (
 	"archive/zip"
+	"bytes"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
+	"os/exec"
+	"strconv"
+	"text/template"
 
-	scp "github.com/bramvdbogaerde/go-scp"
-	"github.com/bramvdbogaerde/go-scp/auth"
 	"github.com/urfave/cli/v2"
-	"golang.org/x/crypto/ssh"
 	"gopkg.in/yaml.v2"
 )
 
@@ -90,22 +91,56 @@ func UnzipConsul(zipFile *os.File) (*os.File, error) {
 func CopyConsulToHosts(c *Config, file *os.File) error {
 	allHosts := append(c.Clients, c.Servers...)
 	for _, host := range allHosts {
-		clientConfig, err := auth.PrivateKey(host.User, c.SSHKey, ssh.InsecureIgnoreHostKey())
-		if err != nil {
-			return err
-		}
-		client := scp.NewClient(fmt.Sprintf("%s:%d", host.Address, host.SshPort), &clientConfig)
-		err = client.Connect()
-		if err != nil {
-			return err
-		}
-		defer client.Close()
-
-		err = client.CopyFile(file, "/usr/local/bin/", "0744")
-		if err != nil {
+		scpCmd := exec.Command("scp",
+			"-P", strconv.Itoa(int(host.SshPort)),
+			"-i", c.SSHKey,
+			file.Name(),
+			fmt.Sprintf("%s@%s:/usr/local/bin", host.User, host.Address))
+		scpCmd.Stderr = os.Stderr
+		if err := scpCmd.Run(); err != nil {
 			return err
 		}
 	}
+	return nil
+}
+
+func DeploySeriveDescription(c *Config) error {
+	tpl, err := template.New("consul.service").ParseFS(ConsulTemplates, "templates/consul.service")
+	if err != nil {
+		return err
+	}
+
+	for _, host := range append(c.Clients, c.Servers...) {
+		renderedService := bytes.Buffer{}
+		err = tpl.Execute(&renderedService, map[string]string{
+			"AgentName": host.AgentName,
+		})
+		if err != nil {
+			return err
+		}
+
+		tempFile, err := ioutil.TempFile("", fmt.Sprintf("consul.service%s", host.Address))
+		if err != nil {
+			return err
+		}
+		defer tempFile.Close()
+
+		_, err = tempFile.Write(renderedService.Bytes())
+		if err != nil {
+			return err
+		}
+
+		scpCmd := exec.Command("scp",
+			"-P", strconv.Itoa(int(host.SshPort)),
+			"-i", c.SSHKey,
+			tempFile.Name(),
+			fmt.Sprintf("%s@%s:/etc/systemd/system/consul.service", host.User, host.Address))
+		scpCmd.Stderr = os.Stderr
+		if err := scpCmd.Run(); err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 
@@ -130,12 +165,25 @@ func Up(c *cli.Context) error {
 	}
 	defer os.Remove(consulBin.Name())
 
-	log.Println("Copying binary to all hosts")
+	log.Println("Deploying consul binary to all agents")
 	if err := CopyConsulToHosts(config, consulBin); err != nil {
 		return err
 	}
 
-	log.Println("Done!")
+	log.Println("Deploying service description to all agents")
+	if err := DeploySeriveDescription(config); err != nil {
+		return err
+	}
 
+	// log.Println("Generating consul client certificates")
+	// log.Println("Deploying consul client certificates")
+	// log.Println("Generating consul server certificates")
+	// log.Println("Deploying consul server certificates")
+	// log.Println("Deploying config to client agents")
+	// log.Println("Deploying config to server agents")
+	// log.Println("Creating data directories on all agents")
+	// log.Println("Enabling and starting consul services on all agents")
+
+	log.Println("Done!")
 	return nil
 }
