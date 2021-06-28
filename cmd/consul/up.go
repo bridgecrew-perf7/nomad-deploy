@@ -1,14 +1,18 @@
 package consul
 
 import (
+	"archive/zip"
 	"fmt"
+	"io"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"os"
-	"os/exec"
-	"strconv"
 
+	scp "github.com/bramvdbogaerde/go-scp"
+	"github.com/bramvdbogaerde/go-scp/auth"
 	"github.com/urfave/cli/v2"
+	"golang.org/x/crypto/ssh"
 	"gopkg.in/yaml.v2"
 )
 
@@ -38,7 +42,7 @@ func ReadConfig() (*Config, error) {
 	return &config, nil
 }
 
-func DownloadConsul(c *Config) (*os.File, error) {
+func DownloadConsulZip(c *Config) (*os.File, error) {
 	resp, err := http.Get(fmt.Sprintf("https://releases.hashicorp.com/consul/%s/consul_%s_linux_amd64.zip",
 		c.ConsulVersion, c.ConsulVersion))
 	if err != nil {
@@ -51,24 +55,54 @@ func DownloadConsul(c *Config) (*os.File, error) {
 		return nil, err
 	}
 
+	io.Copy(file, resp.Body)
+
 	return file, nil
+}
+
+func UnzipConsul(zipFile *os.File) (*os.File, error) {
+	r, err := zip.OpenReader(zipFile.Name())
+	if err != nil {
+		return nil, err
+	}
+	defer r.Close()
+
+	result, err := ioutil.TempFile("", "consul-bin")
+	if err != nil {
+		return nil, err
+	}
+	for _, f := range r.File {
+		if f.Name == "consul" {
+			rc, err := f.Open()
+			if err != nil {
+				return nil, err
+			}
+			defer rc.Close()
+			_, err = io.Copy(result, rc)
+			if err != nil {
+				return nil, err
+			}
+		}
+	}
+	return result, nil
 }
 
 func CopyConsulToHosts(c *Config, file *os.File) error {
 	allHosts := append(c.Clients, c.Servers...)
-	unzipCmd := exec.Command("unzip",
-		file.Name(),
-		"-d", "/tmp")
-	if err := unzipCmd.Run(); err != nil {
-		return err
-	}
-
 	for _, host := range allHosts {
-		copyCmd := exec.Command("scp",
-			"-P", strconv.Itoa(int(host.SshPort)),
-			"/tmp/consul",
-			fmt.Sprintf("%s@%s:/home/%s/", host.User, host.Address, host.User))
-		if err := copyCmd.Run(); err != nil {
+		clientConfig, err := auth.PrivateKey(host.User, c.SSHKey, ssh.InsecureIgnoreHostKey())
+		if err != nil {
+			return err
+		}
+		client := scp.NewClient(fmt.Sprintf("%s:%d", host.Address, host.SshPort), &clientConfig)
+		err = client.Connect()
+		if err != nil {
+			return err
+		}
+		defer client.Close()
+
+		err = client.CopyFile(file, "/usr/local/bin/", "0744")
+		if err != nil {
 			return err
 		}
 	}
@@ -76,16 +110,32 @@ func CopyConsulToHosts(c *Config, file *os.File) error {
 }
 
 func Up(c *cli.Context) error {
+	log.Println("Reading config consul.yaml")
 	config, err := ReadConfig()
 	if err != nil {
 		return err
 	}
 
-	consulZip, err := DownloadConsul(config)
+	log.Printf("Downloading consul v%s from releases.hashicorp.com\n", config.ConsulVersion)
+	consulZip, err := DownloadConsulZip(config)
+	defer os.Remove(consulZip.Name())
 	if err != nil {
 		return err
 	}
 
-	os.Remove(consulZip.Name())
+	log.Println("Unzipping consul archive")
+	consulBin, err := UnzipConsul(consulZip)
+	if err != nil {
+		return err
+	}
+	defer os.Remove(consulBin.Name())
+
+	log.Println("Copying binary to all hosts")
+	if err := CopyConsulToHosts(config, consulBin); err != nil {
+		return err
+	}
+
+	log.Println("Done!")
+
 	return nil
 }
