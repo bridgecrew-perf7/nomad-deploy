@@ -35,15 +35,18 @@ type Host struct {
 	SshPort   int64  `yaml:"sshPort"`
 	User      string `yaml:"user"`
 	AgentName string `yaml:"agentName"`
+	Number    int    `yaml:"number"`
 }
 
 type Config struct {
 	ConsulVersion string `yaml:"version"`
 	GossipEnabled bool   `yaml:"gossipEnabled"`
+	ACLEnabled    bool   `yaml:"aclEnabled"`
 	TLSEnabled    bool   `yaml:"tlsEnabled"`
 	Servers       []Host `yaml:"servers"`
 	Clients       []Host `yaml:"clients"`
 	SSHKey        string `yaml:"sshKey"`
+	DCName        string `yaml:"dcName"`
 }
 
 func generateConfig(c *cli.Context) error {
@@ -169,6 +172,7 @@ func question(q string, defaultValue string, t int) interface{} {
 
 func survey() *Config {
 	c := new(Config)
+	c.DCName = question("Name of datacenter", "dc1", stringInput).(string)
 	hostsNumber := question("Number of hosts", "1", intInput).(int64)
 	for hostNumber := int64(1); hostNumber <= hostsNumber; hostNumber++ {
 		address := question(fmt.Sprintf("IP of %d host", hostNumber), "127.0.0.1", hostInput).(string)
@@ -177,14 +181,15 @@ func survey() *Config {
 		isServer := question(fmt.Sprintf("Is %d host server?", hostNumber), "yes", booleanInput).(bool)
 
 		if isServer {
-			c.Servers = append(c.Servers, Host{address, sshPort, user, fmt.Sprintf("server%d", len(c.Servers)+1)})
+			c.Servers = append(c.Servers, Host{address, sshPort, user, fmt.Sprintf("server-%d", len(c.Servers)), len(c.Servers)})
 		} else {
-			c.Clients = append(c.Clients, Host{address, sshPort, user, fmt.Sprintf("client%d", len(c.Clients)+1)})
+			c.Clients = append(c.Clients, Host{address, sshPort, user, fmt.Sprintf("client-%d", len(c.Clients)), len(c.Clients)})
 		}
 	}
 	c.ConsulVersion = question("Consul version", "1.10.0", stringInput).(string)
 	c.GossipEnabled = question("Enable gossip encryption?", "yes", booleanInput).(bool)
 	c.TLSEnabled = question("Enable tls encryption?", "yes", booleanInput).(bool)
+	c.ACLEnabled = question("Enable acl?", "yes", booleanInput).(bool)
 	c.SSHKey = question("Your private SSH key", "~/.ssh/id_rsa", stringInput).(string)
 
 	return c
