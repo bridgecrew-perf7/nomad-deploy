@@ -16,7 +16,22 @@ type Certificate struct {
 	Key []byte
 }
 
-func CreateCA() (*Certificate, error) {
+type Issuer struct {
+	CA *Certificate
+}
+
+func NewIssuer() (*Issuer, error) {
+	issuer := new(Issuer)
+	ca, err := createCA()
+	if err != nil {
+		return nil, err
+	}
+	issuer.CA = ca
+
+	return issuer, nil
+}
+
+func createCA() (*Certificate, error) {
 	ca := &x509.Certificate{
 		SerialNumber: big.NewInt(2021),
 		Subject: pkix.Name{
@@ -58,4 +73,8 @@ func CreateCA() (*Certificate, error) {
 	})
 
 	return &Certificate{Pem: caPEM.Bytes(), Key: caPrivKeyPEM.Bytes()}, nil
+}
+
+func (i *Issuer) IssueCA() (*Certificate, error) {
+	return nil, nil
 }
