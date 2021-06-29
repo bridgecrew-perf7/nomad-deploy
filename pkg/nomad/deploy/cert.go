@@ -12,7 +12,7 @@ import (
 
 func (c *Nomad) GenerateGossipKey() (string, error) {
 	key := bytes.Buffer{}
-	cmd := exec.Command(c.NomadBinPath, "keygen")
+	cmd := exec.Command(c.NomadBinPath, "operator", "keygen")
 	cmd.Stderr = os.Stderr
 	cmd.Stdout = &key
 	if err := cmd.Run(); err != nil {
@@ -31,7 +31,7 @@ func (c *Nomad) CreateDir(dirpath string) error {
 }
 
 func (c *Nomad) GenerateCertificates() (string, error) {
-	tempDir, err := ioutil.TempDir("", "consul-cert")
+	tempDir, err := ioutil.TempDir("", "nomad-cert")
 	if err != nil {
 		return "", err
 	}
@@ -93,8 +93,8 @@ func (c *Nomad) DeployCertificates(certsDir string) error {
 		if err != nil {
 			return err
 		}
-		for _, cert := range append(certs, filepath.Join(certsDir, "consul-agent-ca.pem")) {
-			err = Scp(host, c.Cfg, cert, "/etc/consul.d/")
+		for _, cert := range append(certs, filepath.Join(certsDir, "nomad-agent-ca.pem")) {
+			err = Scp(host, c.Cfg, cert, "/etc/nomad.d/")
 			if err != nil {
 				return err
 			}
@@ -105,8 +105,8 @@ func (c *Nomad) DeployCertificates(certsDir string) error {
 		if err != nil {
 			return err
 		}
-		for _, cert := range append(certs, filepath.Join(certsDir, "consul-agent-ca.pem")) {
-			err = Scp(host, c.Cfg, cert, "/etc/consul.d/")
+		for _, cert := range append(certs, filepath.Join(certsDir, "nomad-agent-ca.pem")) {
+			err = Scp(host, c.Cfg, cert, "/etc/nomad.d/")
 			if err != nil {
 				return err
 			}
@@ -117,7 +117,7 @@ func (c *Nomad) DeployCertificates(certsDir string) error {
 }
 
 func (c *Nomad) PrintBootstrapTokenInfo() error {
-	output, err := Ssh(c.Cfg.Servers[0], c.Cfg, "consul acl bootstrap")
+	output, err := Ssh(c.Cfg.Servers[0], c.Cfg, "nomad acl bootstrap")
 	if err != nil {
 		return err
 	}

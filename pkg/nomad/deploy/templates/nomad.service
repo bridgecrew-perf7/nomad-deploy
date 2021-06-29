@@ -1,18 +1,18 @@
 [Unit]
-Description=Consul Service Discovery Agent
-Documentation=https://www.consul.io/
+Description=Nomad orchestrator
+Documentation=https://www.nomadproject.io/
 After=network-online.target
 Wants=network-online.target
-ConditionFileNotEmpty=/etc/consul.d/consul.hcl
+ConditionFileNotEmpty=/etc/nomad.d/nomad.hcl
 
 [Service]
 Type=simple
-ExecStart=/usr/local/bin/consul agent -node={{ .AgentName }} -config-dir=/etc/consul.d
+ExecStart=/usr/local/bin/nomad agent -node={{ .AgentName }} -config=/etc/nomad.d
 ExecReload=/bin/kill -HUP $MAINPID
 KillSignal=SIGINT
-TimeoutStopSec=5
-Restart=on-failure
-SyslogIdentifier=consul
-
-[Install]
-WantedBy=multi-user.target
+TimeoutStopSec=5                                                                                                                                    
+Restart=on-failure                                                                                                                                  
+SyslogIdentifier=nomad                                                                                                                              
+                                                                                                                                                    
+[Install]                                                                                                                                           
+WantedBy=multi-user.target     

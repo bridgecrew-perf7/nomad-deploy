@@ -5,7 +5,7 @@ func (c *Nomad) DeleteServices() error {
 		_, err := Ssh(
 			host,
 			c.Cfg,
-			"bash -c \"systemctl stop consul; systemctl disable consul; rm -f /etc/systemd/system/consul.service\"")
+			"bash -c \"systemctl stop nomad; systemctl disable nomad; rm -f /etc/systemd/system/nomad.service\"")
 		if err != nil {
 			return err
 		}
@@ -15,7 +15,7 @@ func (c *Nomad) DeleteServices() error {
 
 func (c *Nomad) DeleteConfigs() error {
 	for _, host := range append(c.Cfg.Clients, c.Cfg.Servers...) {
-		_, err := Ssh(host, c.Cfg, "bash -c \"rm -rf /etc/consul.d\"")
+		_, err := Ssh(host, c.Cfg, "bash -c \"rm -rf /etc/nomad.d\"")
 		if err != nil {
 			return err
 		}
@@ -25,7 +25,7 @@ func (c *Nomad) DeleteConfigs() error {
 
 func (c *Nomad) DeleteData() error {
 	for _, host := range append(c.Cfg.Clients, c.Cfg.Servers...) {
-		_, err := Ssh(host, c.Cfg, "bash -c \"rm -rf /opt/consul\"")
+		_, err := Ssh(host, c.Cfg, "bash -c \"rm -rf /opt/nomad\"")
 		if err != nil {
 			return err
 		}
