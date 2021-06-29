@@ -1,1 +1,3 @@
-retry_join = {{ .Servers }}
+client {
+   enabled = true
+}

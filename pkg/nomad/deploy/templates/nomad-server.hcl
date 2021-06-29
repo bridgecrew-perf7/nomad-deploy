@@ -1,3 +1,4 @@
-server = true
-bootstrap_expect = 1
-ui = true
+server {
+    enabled = true
+    bootstrap_expect = 1    
+}

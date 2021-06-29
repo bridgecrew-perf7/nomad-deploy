@@ -40,14 +40,14 @@ func NewDeployer(Cfg *config.Config) (*Nomad, error) {
 }
 
 func downloadZip(Cfg *config.Config) (string, error) {
-	resp, err := http.Get(fmt.Sprintf("https://releases.hashicorp.com/consul/%s/consul_%s_linux_amd64.zip",
+	resp, err := http.Get(fmt.Sprintf("https://releases.hashicorp.com/nomad/%s/nomad_%s_linux_amd64.zip",
 		Cfg.NomadVersion, Cfg.NomadVersion))
 	if err != nil {
 		return "", err
 	}
 	defer resp.Body.Close()
 
-	file, err := ioutil.TempFile("", fmt.Sprintf("consul%s", Cfg.NomadVersion))
+	file, err := ioutil.TempFile("", fmt.Sprintf("nomad%s", Cfg.NomadVersion))
 	if err != nil {
 		return "", err
 	}
@@ -64,14 +64,14 @@ func unzip(zipFile string) (string, error) {
 	}
 	defer r.Close()
 
-	result, err := ioutil.TempFile("", "consul-bin")
+	result, err := ioutil.TempFile("", "nomad-bin")
 	if err != nil {
 		return "", err
 	}
 
 	defer result.Close()
 	for _, f := range r.File {
-		if f.Name == "consul" {
+		if f.Name == "nomad" {
 			rc, err := f.Open()
 			if err != nil {
 				return "", err
@@ -98,7 +98,7 @@ func (c *Nomad) DeployBinary() error {
 		if err != nil {
 			return err
 		}
-		if strings.Contains(bins, "consul") {
+		if strings.Contains(bins, "nomad") {
 			continue
 		}
 
