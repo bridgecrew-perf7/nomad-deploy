@@ -1,4 +1,5 @@
 server {
     enabled = true
-    bootstrap_expect = 1    
+    encrypt = "{{ .GossipKey }}"
+    bootstrap_expect = 1
 }

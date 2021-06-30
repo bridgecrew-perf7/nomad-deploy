@@ -10,7 +10,8 @@ import (
 	"net/http"
 	"strings"
 
-	"gitlab.gs-labs.tv/casdevops/nomad-deploy/pkg/nomad/config"
+	"gitlab.gs-labs.tv/casdevops/nomad-deploy/pkg/config"
+	"gitlab.gs-labs.tv/casdevops/nomad-deploy/pkg/ssh"
 )
 
 //go:embed templates
@@ -41,13 +42,13 @@ func NewDeployer(Cfg *config.Config) (*Nomad, error) {
 
 func downloadZip(Cfg *config.Config) (string, error) {
 	resp, err := http.Get(fmt.Sprintf("https://releases.hashicorp.com/nomad/%s/nomad_%s_linux_amd64.zip",
-		Cfg.NomadVersion, Cfg.NomadVersion))
+		Cfg.BinaryVersion, Cfg.BinaryVersion))
 	if err != nil {
 		return "", err
 	}
 	defer resp.Body.Close()
 
-	file, err := ioutil.TempFile("", fmt.Sprintf("nomad%s", Cfg.NomadVersion))
+	file, err := ioutil.TempFile("", fmt.Sprintf("nomad%s", Cfg.BinaryVersion))
 	if err != nil {
 		return "", err
 	}
@@ -94,7 +95,7 @@ func (c *Nomad) DeployBinary() error {
 	allHosts := append(c.Cfg.Clients, c.Cfg.Servers...)
 	for _, host := range allHosts {
 		// check if binary already exists
-		bins, err := Ssh(host, c.Cfg, "ls /usr/local/bin/")
+		bins, err := ssh.Ssh(host, c.Cfg, "ls /usr/local/bin/")
 		if err != nil {
 			return err
 		}
@@ -102,7 +103,7 @@ func (c *Nomad) DeployBinary() error {
 			continue
 		}
 
-		if err := Scp(host, c.Cfg, c.NomadBinPath, "/usr/local/bin/nomad"); err != nil {
+		if err := ssh.Scp(host, c.Cfg, c.NomadBinPath, "/usr/local/bin/nomad"); err != nil {
 			return err
 		}
 	}

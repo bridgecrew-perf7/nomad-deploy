@@ -4,7 +4,7 @@ import (
 	"log"
 
 	"github.com/urfave/cli/v2"
-	"gitlab.gs-labs.tv/casdevops/nomad-deploy/pkg/consul/config"
+	"gitlab.gs-labs.tv/casdevops/nomad-deploy/pkg/config"
 	"gitlab.gs-labs.tv/casdevops/nomad-deploy/pkg/consul/deploy"
 )
 

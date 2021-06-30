@@ -1,12 +1,11 @@
 package nomad
 
-import "github.com/urfave/cli/v2"
+import (
+	"github.com/urfave/cli/v2"
+	"gitlab.gs-labs.tv/casdevops/nomad-deploy/pkg/config"
+)
 
-func init() {
-	Cmd.Subcommands = append(Cmd.Subcommands,
-		&cli.Command{
-			Name:        "config",
-			Description: "Generate nomad configuration file",
-		},
-	)
+func GenerateConfig(c *cli.Context) error {
+	config := config.Survey()
+	return config.Save()
 }

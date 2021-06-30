@@ -1,8 +1,11 @@
 package deploy
 
-func (c *Nomad) DeleteServices() error {
+import "gitlab.gs-labs.tv/casdevops/nomad-deploy/pkg/ssh"
+
+// DeleteSystemd deletes systemd service file
+func (c *Nomad) DeleteSystemd() error {
 	for _, host := range append(c.Cfg.Clients, c.Cfg.Servers...) {
-		_, err := Ssh(
+		_, err := ssh.Ssh(
 			host,
 			c.Cfg,
 			"bash -c \"systemctl stop nomad; systemctl disable nomad; rm -f /etc/systemd/system/nomad.service\"")
@@ -13,9 +16,10 @@ func (c *Nomad) DeleteServices() error {
 	return nil
 }
 
+// DeleteConfigs deletes configuration directory
 func (c *Nomad) DeleteConfigs() error {
 	for _, host := range append(c.Cfg.Clients, c.Cfg.Servers...) {
-		_, err := Ssh(host, c.Cfg, "bash -c \"rm -rf /etc/nomad.d\"")
+		_, err := ssh.Ssh(host, c.Cfg, "bash -c \"rm -rf /etc/nomad.d\"")
 		if err != nil {
 			return err
 		}
@@ -23,9 +27,10 @@ func (c *Nomad) DeleteConfigs() error {
 	return nil
 }
 
+// DeleteData deletes data directory
 func (c *Nomad) DeleteData() error {
 	for _, host := range append(c.Cfg.Clients, c.Cfg.Servers...) {
-		_, err := Ssh(host, c.Cfg, "bash -c \"rm -rf /opt/nomad\"")
+		_, err := ssh.Ssh(host, c.Cfg, "bash -c \"rm -rf /opt/nomad\"")
 		if err != nil {
 			return err
 		}

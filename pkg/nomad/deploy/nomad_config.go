@@ -1,107 +1,84 @@
 package deploy
 
 import (
-	"bytes"
-	"fmt"
-	"io"
 	"io/ioutil"
-	"log"
+	"os"
 	"text/template"
+
+	"gitlab.gs-labs.tv/casdevops/nomad-deploy/pkg/ssh"
 )
 
-func (c *Nomad) DeployNomadConfigs() error {
-	commonTpl, err := template.New("nomad.hcl").ParseFS(c.Templates, "templates/nomad.hcl")
+// DeployBaseConfig deploys common between client and server agents
+// configuration on hosts
+func (c *Nomad) DeployBaseConfig() error {
+	tpl, err := template.New("nomad.hcl").ParseFS(c.Templates, "templates/nomad.hcl")
 	if err != nil {
 		return err
 	}
-	serverFile, err := ioutil.TempFile("", "nomad-server.hcl")
+	for _, host := range c.Cfg.AllHosts() {
+		tmp, err := ioutil.TempFile("", "nomad.hcl")
+		if err != nil {
+			return err
+		}
+		defer os.Remove(tmp.Name())
+		tpl.Execute(tmp, map[string]string{
+			"DCName":  c.Cfg.DCName,
+			"Address": host.Address,
+		})
+		if err := ssh.Scp(host, c.Cfg, tmp.Name(), "/etc/nomad.d/nomad.hcl"); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// DeployServerConfig deploys server-only part of configuration
+// on all server hosts
+func (c *Nomad) DeployServerConfig() error {
+	tpl, err := template.New("nomad-server.hcl").ParseFS(templates, "templates/nomad-server.hcl")
 	if err != nil {
 		return err
 	}
-	clientFile, err := ioutil.TempFile("", "nomad-client.hcl")
+	tmp, err := ioutil.TempFile("", "nomad-server.hcl")
 	if err != nil {
 		return err
 	}
-
-	parameters := make(map[string]string)
-	parameters["DCName"] = c.Cfg.DCName
-	if c.Cfg.GossipEnabled {
-		log.Println("Generating gossip key")
-		parameters["GossipKey"], err = c.GenerateGossipKey()
-		if err != nil {
-			return err
-		}
-		log.Println("Generated gossip key: ", parameters["GossipKey"])
+	gossipKey, err := c.GenerateGossipKey()
+	if err != nil {
+		return err
 	}
-
-	for _, host := range c.Cfg.Clients {
-		commonConfig := bytes.Buffer{}
-		clientConfig := bytes.Buffer{}
-		if err := commonTpl.Execute(&commonConfig, parameters); err != nil {
-			return err
-		}
-		commonFile, err := ioutil.TempFile("", fmt.Sprintf("nomad.hcl%d", host.Number))
-		if err != nil {
-			return err
-		}
-		defer commonFile.Close()
-		serverFile, err := ioutil.TempFile("", fmt.Sprintf("nomad-client.hcl%d", host.Number))
-		if err != nil {
-			return err
-		}
-		defer serverFile.Close()
-		if _, err := io.Copy(commonFile, &commonConfig); err != nil {
-			return err
-		}
-		if _, err := io.Copy(serverFile, &clientConfig); err != nil {
-			return err
-		}
-		if err := Scp(host, c.Cfg, commonFile.Name(), "/etc/nomad.d/nomad.hcl"); err != nil {
-			return err
-		}
-		if err := Scp(host, c.Cfg, serverFile.Name(), "/etc/nomad.d/nomad-client.hcl"); err != nil {
-			return err
-		}
-	}
-
+	defer os.Remove(tmp.Name())
+	tpl.Execute(tmp, map[string]string{
+		"GossipKey": gossipKey,
+	})
 	for _, host := range c.Cfg.Servers {
-		parameters["Address"] = host.Address
-		if c.Cfg.TLSEnabled {
-			parameters["CertFile"] = fmt.Sprintf("%s-server-nomad-%d.pem", c.Cfg.DCName, host.Number)
-			parameters["KeyFile"] = fmt.Sprintf("%s-server-nomad-%d-key.pem", c.Cfg.DCName, host.Number)
-		}
-
-		commonConfig := bytes.Buffer{}
-		serverConfig := bytes.Buffer{}
-		if err := commonTpl.Execute(&commonConfig, parameters); err != nil {
-			return err
-		}
-		if err := serverTpl.Execute(&serverConfig, parameters); err != nil {
-			return err
-		}
-		commonFile, err := ioutil.TempFile("", fmt.Sprintf("nomad.hcl%d", host.Number))
-		if err != nil {
-			return err
-		}
-		defer commonFile.Close()
-		serverFile, err := ioutil.TempFile("", fmt.Sprintf("nomad-server.hcl%d", host.Number))
-		if err != nil {
-			return err
-		}
-		defer serverFile.Close()
-		if _, err := io.Copy(commonFile, &commonConfig); err != nil {
-			return err
-		}
-		if _, err := io.Copy(serverFile, &serverConfig); err != nil {
-			return err
-		}
-		if err := Scp(host, c.Cfg, commonFile.Name(), "/etc/nomad.d/nomad.hcl"); err != nil {
-			return err
-		}
-		if err := Scp(host, c.Cfg, serverFile.Name(), "/etc/nomad.d/nomad-server.hcl"); err != nil {
+		if err := ssh.Scp(host, c.Cfg, tmp.Name(), "/etc/nomad.d/nomad-server.hcl"); err != nil {
 			return err
 		}
 	}
+	return nil
+}
 
+// DeployClientConfig deploys client-only part of configuration
+// on all client hosts
+func (c *Nomad) DeployClientConfig() error {
+	tmp, err := ioutil.TempFile("", "nomad-client.hcl")
+	if err != nil {
+		return err
+	}
+	defer os.Remove(tmp.Name())
+	rawConfig, err := templates.ReadFile("templates/nomad-client.hcl")
+	if err != nil {
+		return err
+	}
+	_, err = tmp.Write(rawConfig)
+	if err != nil {
+		return err
+	}
+	for _, host := range c.Cfg.Clients {
+		if err := ssh.Scp(host, c.Cfg, tmp.Name(), "/etc/nomad.d/nomad-client.hcl"); err != nil {
+			return err
+		}
+	}
 	return nil
 }
