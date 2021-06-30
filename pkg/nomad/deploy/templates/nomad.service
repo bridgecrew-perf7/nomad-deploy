@@ -10,9 +10,9 @@ Type=simple
 ExecStart=/usr/local/bin/nomad agent -node={{ .AgentName }} -config=/etc/nomad.d
 ExecReload=/bin/kill -HUP $MAINPID
 KillSignal=SIGINT
-TimeoutStopSec=5                                                                                                                                    
-Restart=on-failure                                                                                                                                  
-SyslogIdentifier=nomad                                                                                                                              
-                                                                                                                                                    
-[Install]                                                                                                                                           
-WantedBy=multi-user.target     
+TimeoutStopSec=5
+Restart=on-failure
+SyslogIdentifier=nomad
+
+[Install]
+WantedBy=multi-user.target

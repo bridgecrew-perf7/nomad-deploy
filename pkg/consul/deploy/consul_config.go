@@ -8,6 +8,8 @@ import (
 	"log"
 	"strings"
 	"text/template"
+
+	"gitlab.gs-labs.tv/casdevops/nomad-deploy/pkg/ssh"
 )
 
 func (c *Consul) DeployConsulConfigs() error {
@@ -80,10 +82,10 @@ func (c *Consul) DeployConsulConfigs() error {
 		if _, err := io.Copy(serverFile, &clientConfig); err != nil {
 			return err
 		}
-		if err := Scp(host, c.Cfg, commonFile.Name(), "/etc/consul.d/consul.hcl"); err != nil {
+		if err := ssh.Scp(host, c.Cfg, commonFile.Name(), "/etc/consul.d/consul.hcl"); err != nil {
 			return err
 		}
-		if err := Scp(host, c.Cfg, serverFile.Name(), "/etc/consul.d/consul-client.hcl"); err != nil {
+		if err := ssh.Scp(host, c.Cfg, serverFile.Name(), "/etc/consul.d/consul-client.hcl"); err != nil {
 			return err
 		}
 	}
@@ -119,10 +121,10 @@ func (c *Consul) DeployConsulConfigs() error {
 		if _, err := io.Copy(serverFile, &serverConfig); err != nil {
 			return err
 		}
-		if err := Scp(host, c.Cfg, commonFile.Name(), "/etc/consul.d/consul.hcl"); err != nil {
+		if err := ssh.Scp(host, c.Cfg, commonFile.Name(), "/etc/consul.d/consul.hcl"); err != nil {
 			return err
 		}
-		if err := Scp(host, c.Cfg, serverFile.Name(), "/etc/consul.d/consul-server.hcl"); err != nil {
+		if err := ssh.Scp(host, c.Cfg, serverFile.Name(), "/etc/consul.d/consul-server.hcl"); err != nil {
 			return err
 		}
 	}

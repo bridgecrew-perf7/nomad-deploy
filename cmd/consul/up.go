@@ -5,7 +5,7 @@ import (
 	"os"
 
 	"github.com/urfave/cli/v2"
-	"gitlab.gs-labs.tv/casdevops/nomad-deploy/pkg/consul/config"
+	"gitlab.gs-labs.tv/casdevops/nomad-deploy/pkg/config"
 	"gitlab.gs-labs.tv/casdevops/nomad-deploy/pkg/consul/deploy"
 )
 
@@ -16,7 +16,7 @@ func Up(c *cli.Context) error {
 		return err
 	}
 
-	log.Printf("Downloading consul v%s from releases.hashicorp.com\n", config.ConsulVersion)
+	log.Printf("Downloading consul v%s from releases.hashicorp.com\n", config.BinaryVersion)
 	deployer, err := deploy.NewDeployer(config)
 	if err != nil {
 		return err

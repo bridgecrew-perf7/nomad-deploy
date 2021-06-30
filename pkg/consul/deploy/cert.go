@@ -8,6 +8,8 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+
+	"gitlab.gs-labs.tv/casdevops/nomad-deploy/pkg/ssh"
 )
 
 func (c *Consul) GenerateGossipKey() (string, error) {
@@ -23,7 +25,7 @@ func (c *Consul) GenerateGossipKey() (string, error) {
 
 func (c *Consul) CreateDir(dirpath string) error {
 	for _, host := range append(c.Cfg.Clients, c.Cfg.Servers...) {
-		if _, err := Ssh(host, c.Cfg, fmt.Sprintf("mkdir -p %s", dirpath)); err != nil {
+		if _, err := ssh.Ssh(host, c.Cfg, fmt.Sprintf("mkdir -p %s", dirpath)); err != nil {
 			return err
 		}
 	}
@@ -94,7 +96,7 @@ func (c *Consul) DeployCertificates(certsDir string) error {
 			return err
 		}
 		for _, cert := range append(certs, filepath.Join(certsDir, "consul-agent-ca.pem")) {
-			err = Scp(host, c.Cfg, cert, "/etc/consul.d/")
+			err = ssh.Scp(host, c.Cfg, cert, "/etc/consul.d/")
 			if err != nil {
 				return err
 			}
@@ -106,7 +108,7 @@ func (c *Consul) DeployCertificates(certsDir string) error {
 			return err
 		}
 		for _, cert := range append(certs, filepath.Join(certsDir, "consul-agent-ca.pem")) {
-			err = Scp(host, c.Cfg, cert, "/etc/consul.d/")
+			err = ssh.Scp(host, c.Cfg, cert, "/etc/consul.d/")
 			if err != nil {
 				return err
 			}
@@ -117,7 +119,7 @@ func (c *Consul) DeployCertificates(certsDir string) error {
 }
 
 func (c *Consul) PrintBootstrapTokenInfo() error {
-	output, err := Ssh(c.Cfg.Servers[0], c.Cfg, "consul acl bootstrap")
+	output, err := ssh.Ssh(c.Cfg.Servers[0], c.Cfg, "consul acl bootstrap")
 	if err != nil {
 		return err
 	}

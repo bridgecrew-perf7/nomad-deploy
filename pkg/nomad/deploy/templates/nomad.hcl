@@ -1,7 +1,6 @@
 datacenter = "{{ .DCName }}"
 data_dir = "/opt/nomad"
-bind_addr = "0.0.0.0"
-encrypt = "{{ .GossipKey }}"
+bind_addr = "{{ .Address }}"
 tls {
   http = false
   rpc = false

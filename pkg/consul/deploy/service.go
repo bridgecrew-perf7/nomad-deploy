@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"html/template"
 	"io/ioutil"
+
+	"gitlab.gs-labs.tv/casdevops/nomad-deploy/pkg/ssh"
 )
 
 func (c *Consul) DeployServices() error {
@@ -32,7 +34,7 @@ func (c *Consul) DeployServices() error {
 			return err
 		}
 
-		if err = Scp(host, c.Cfg, tmpFile.Name(), "/etc/systemd/system/consul.service"); err != nil {
+		if err = ssh.Scp(host, c.Cfg, tmpFile.Name(), "/etc/systemd/system/consul.service"); err != nil {
 			return err
 		}
 	}
@@ -41,10 +43,10 @@ func (c *Consul) DeployServices() error {
 
 func (c *Consul) StartServices() error {
 	for _, host := range append(c.Cfg.Servers, c.Cfg.Clients...) {
-		if _, err := Ssh(host, c.Cfg, "systemctl enable consul.service"); err != nil {
+		if _, err := ssh.Ssh(host, c.Cfg, "systemctl enable consul.service"); err != nil {
 			return err
 		}
-		if _, err := Ssh(host, c.Cfg, "systemctl start consul.service"); err != nil {
+		if _, err := ssh.Ssh(host, c.Cfg, "systemctl start consul.service"); err != nil {
 			return err
 		}
 	}
