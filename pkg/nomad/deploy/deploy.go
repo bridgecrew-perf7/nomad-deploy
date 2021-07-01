@@ -109,3 +109,13 @@ func (c *Nomad) DeployBinary() error {
 	}
 	return nil
 }
+
+// CreateDir creates remote directory with specified path
+func (c *Nomad) CreateDir(dirpath string) error {
+	for _, host := range append(c.Cfg.Clients, c.Cfg.Servers...) {
+		if _, err := ssh.Ssh(host, c.Cfg, fmt.Sprintf("mkdir -p %s", dirpath)); err != nil {
+			return err
+		}
+	}
+	return nil
+}

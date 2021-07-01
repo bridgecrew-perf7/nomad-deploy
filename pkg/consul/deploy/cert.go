@@ -23,15 +23,6 @@ func (c *Consul) GenerateGossipKey() (string, error) {
 	return strings.TrimSpace(key.String()), nil
 }
 
-func (c *Consul) CreateDir(dirpath string) error {
-	for _, host := range append(c.Cfg.Clients, c.Cfg.Servers...) {
-		if _, err := ssh.Ssh(host, c.Cfg, fmt.Sprintf("mkdir -p %s", dirpath)); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
 func (c *Consul) GenerateCertificates() (string, error) {
 	tempDir, err := ioutil.TempDir("", "consul-cert")
 	if err != nil {
