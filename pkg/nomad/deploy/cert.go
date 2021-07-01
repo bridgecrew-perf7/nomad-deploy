@@ -12,6 +12,8 @@ import (
 	"gitlab.gs-labs.tv/casdevops/nomad-deploy/pkg/ssh"
 )
 
+// GenerateGossipKey generates random 20-byte key using
+// nomad binary
 func (c *Nomad) GenerateGossipKey() (string, error) {
 	key := bytes.Buffer{}
 	cmd := exec.Command(c.NomadBinPath, "operator", "keygen")
@@ -21,15 +23,6 @@ func (c *Nomad) GenerateGossipKey() (string, error) {
 		return "", err
 	}
 	return strings.TrimSpace(key.String()), nil
-}
-
-func (c *Nomad) CreateDir(dirpath string) error {
-	for _, host := range append(c.Cfg.Clients, c.Cfg.Servers...) {
-		if _, err := ssh.Ssh(host, c.Cfg, fmt.Sprintf("mkdir -p %s", dirpath)); err != nil {
-			return err
-		}
-	}
-	return nil
 }
 
 func (c *Nomad) GenerateCertificates() (string, error) {
