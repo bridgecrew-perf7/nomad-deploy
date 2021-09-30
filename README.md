@@ -17,6 +17,6 @@ with optional gossip encryption enabled and securing API communication with http
 Nomad deployment CLI is the same as for deploying consul:
 ```console
     $ ./nomad-deploy nomad config
-    $ ./cat nomad.yaml
+    $ cat ./nomad.yaml
     $ ./nomad-deploy nomad up # deploy cluster
 ```
